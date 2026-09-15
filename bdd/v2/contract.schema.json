@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.agent-platform/schemas/bdd-task-contract-v2.json",
+  "title": "Behaviour Domain Driver Task Contract v2",
+  "description": "The machine-readable operational contract for one agent task. JSON is used so the contract can be validated with the platform's built-in PowerShell tooling without a package dependency.",
+  "type": "object",
+  "required": ["schema_version", "task", "goal", "assignment", "state", "scope", "permissions", "ownership", "acceptance_criteria", "verification", "evidence", "handoff", "timestamps"],
+  "properties": {
+    "schema_version": { "const": 2 },
+    "task": { "$ref": "#/$defs/task" },
+    "goal": { "type": "string", "minLength": 1 },
+    "assignment": { "$ref": "#/$defs/assignment" },
+    "state": { "$ref": "#/$defs/state" },
+    "scope": { "$ref": "#/$defs/scope" },
+    "permissions": { "$ref": "#/$defs/permissions" },
+    "ownership": { "$ref": "#/$defs/ownership" },
+    "acceptance_criteria": { "type": "array", "items": { "$ref": "#/$defs/criterion" } },
+    "verification": { "$ref": "#/$defs/verification" },
+    "evidence": { "$ref": "#/$defs/evidence" },
+    "handoff": { "$ref": "#/$defs/handoff" },
+    "timestamps": { "$ref": "#/$defs/timestamps" }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "task": { "type": "object", "required": ["id", "source", "repository", "issue"], "additionalProperties": false, "properties": { "id": { "type": "string", "minLength": 1 }, "source": { "type": "string", "minLength": 1 }, "repository": { "type": "string", "minLength": 1 }, "issue": { "type": ["string", "null"] } } },
+    "assignment": { "type": "object", "required": ["role", "engine"], "additionalProperties": false, "properties": { "role": { "enum": ["architect", "implementer", "reviewer", "researcher", "validator", "release"] }, "engine": { "type": "string", "minLength": 1 } } },
+    "state": { "enum": ["CREATED", "PLANNING", "READY", "CLAIMED", "IMPLEMENTING", "VERIFYING", "REVIEWING", "BLOCKED", "READY_FOR_HUMAN", "DONE", "FAILED", "CANCELLED"] },
+    "scope": { "type": "object", "required": ["bounded_context", "allowed", "forbidden"], "additionalProperties": false, "properties": { "bounded_context": { "type": "string", "minLength": 1 }, "allowed": { "type": "array", "items": { "type": "string" } }, "forbidden": { "type": "array", "items": { "type": "string" } } } },
+    "permissions": { "type": "object", "required": ["filesystem", "git_write", "github_write", "merge", "production"], "additionalProperties": false, "properties": { "filesystem": { "enum": ["none", "read-only", "scoped-write"] }, "git_write": { "type": "boolean" }, "github_write": { "type": "boolean" }, "merge": { "type": "boolean" }, "production": { "enum": ["denied", "approval-required", "allowed"] } } },
+    "ownership": { "type": "object", "required": ["task", "branch", "bounded_context", "files", "migrations"], "additionalProperties": false, "properties": { "task": { "type": "string", "minLength": 1 }, "branch": { "type": ["string", "null"] }, "bounded_context": { "type": "string", "minLength": 1 }, "files": { "type": "array", "items": { "type": "string" } }, "migrations": { "type": "array", "items": { "type": "string" } } } },
+    "criterion": { "type": "object", "required": ["id", "description", "status"], "additionalProperties": false, "properties": { "id": { "type": "string", "minLength": 1 }, "description": { "type": "string", "minLength": 1 }, "status": { "enum": ["PENDING", "PASSED", "FAILED", "NOT_APPLICABLE"] } } },
+    "verification": { "type": "object", "required": ["build", "lint", "unit", "integration", "e2e", "guardrails", "ci"], "additionalProperties": false, "properties": { "build": { "$ref": "#/$defs/check" }, "lint": { "$ref": "#/$defs/check" }, "unit": { "$ref": "#/$defs/check" }, "integration": { "$ref": "#/$defs/check" }, "e2e": { "$ref": "#/$defs/check" }, "guardrails": { "$ref": "#/$defs/check" }, "ci": { "$ref": "#/$defs/check" } } },
+    "check": { "enum": ["NOT_RUN", "PASSED", "FAILED", "SKIPPED", "NOT_APPLICABLE"] },
+    "evidence": { "type": "object", "required": ["commit_sha", "changed_files", "test_results", "build_result", "playwright", "ci", "pull_request"], "additionalProperties": false, "properties": { "commit_sha": { "type": ["string", "null"] }, "changed_files": { "type": "array", "items": { "type": "string" } }, "test_results": { "type": "array", "items": { "type": "string" } }, "build_result": { "type": ["string", "null"] }, "playwright": { "type": ["string", "null"] }, "ci": { "type": ["string", "null"] }, "pull_request": { "type": ["string", "null"] } } },
+    "handoff": { "type": "object", "required": ["target_role", "reason"], "additionalProperties": false, "properties": { "target_role": { "enum": ["architect", "implementer", "reviewer", "researcher", "validator", "release", "human"] }, "reason": { "type": "string", "minLength": 1 } } },
+    "timestamps": { "type": "object", "required": ["created", "updated"], "additionalProperties": false, "properties": { "created": { "type": "string", "format": "date-time" }, "updated": { "type": "string", "format": "date-time" } } }
+  }
+}

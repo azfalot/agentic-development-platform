@@ -1,0 +1,111 @@
+# DEPRECATED: Behaviour Domain Driver (BDD) Metadata Schema v1.0
+# New contracts must use bdd/v2/contract.schema.json (schema_version: 2).
+$schema: "http://json-schema.org/draft-07/schema#"
+title: "BehaviourDomainDriver"
+type: "object"
+required:
+  - "bdd_version"
+  - "agent"
+  - "assignment"
+  - "ownership"
+  - "state"
+  - "updated_at"
+
+properties:
+  bdd_version:
+    type: "string"
+    enum: ["1.0"]
+
+  agent:
+    type: "object"
+    required: ["id", "type", "role"]
+    properties:
+      id:
+        type: "string"
+        description: "Unique identifier for this agent instance (e.g. antigravity-1, codex-main)"
+      type:
+        type: "string"
+        enum: ["antigravity", "codex", "gemini", "copilot", "human"]
+      role:
+        type: "string"
+        enum: ["architect", "implementer", "reviewer", "researcher"]
+      capabilities:
+        type: "array"
+        items:
+          type: "string"
+
+  assignment:
+    type: "object"
+    required: ["project", "goal", "branch"]
+    properties:
+      project:
+        type: "string"
+        description: "Project or repository identifier (e.g. hookr, convivia, aiecrf)"
+      issue:
+        type: "string"
+        description: "Issue number or key (e.g. #42, PROJ-101)"
+      goal:
+        type: "string"
+        description: "Clear statement of the task objective"
+      branch:
+        type: "string"
+        description: "Git branch dedicated to this assignment"
+      bounded_context:
+        type: "string"
+        description: "Target architectural domain (e.g. identity, billing, audit)"
+
+  ownership:
+    type: "object"
+    required: ["files"]
+    properties:
+      files:
+        type: "array"
+        items:
+          type: "string"
+        description: "Glob patterns of files actively modified by this agent"
+      migrations:
+        type: "array"
+        items:
+          type: "string"
+        description: "Database migration files created or modified"
+
+  state:
+    type: "string"
+    enum:
+      - "AVAILABLE"
+      - "PLANNING"
+      - "IMPLEMENTING"
+      - "TESTING"
+      - "WAITING_CI"
+      - "REVIEWING"
+      - "BLOCKED"
+      - "DONE"
+
+  updated_at:
+    type: "string"
+    format: "date-time"
+
+  handoff:
+    type: "object"
+    properties:
+      summary:
+        type: "string"
+      pr_url:
+        type: "string"
+      commit_sha:
+        type: "string"
+      tests_passed:
+        type: "array"
+        items:
+          type: "string"
+      ci_status:
+        type: "string"
+        enum: ["SUCCESS", "FAILED", "PENDING", "SKIPPED"]
+      evidence:
+        type: "object"
+        additionalProperties:
+          type: "string"
+      known_risks:
+        type: "string"
+      recommended_next_action:
+        type: "string"

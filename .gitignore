@@ -1,0 +1,18 @@
+# Local execution state and generated worktrees
+.agenthub-worktrees/
+.agenthub-execution-budget.json
+.agenthub-*.log
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+auth.json
+credentials.json
+
+# Editor and operating-system files
+.DS_Store
+Thumbs.db
+.vscode/
