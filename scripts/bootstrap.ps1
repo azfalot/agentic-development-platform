@@ -4,8 +4,10 @@ param(
 )
 $ErrorActionPreference='Stop'
 if(-not $ConfirmInstall){throw 'INSTALL_CONFIRMATION_REQUIRED: rerun with -ConfirmInstall after reviewing the destination.'}
-if(Test-Path -LiteralPath $PlatformHome){throw "INSTALL_TARGET_EXISTS: $PlatformHome"}
 $source=(Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+$candidate=[IO.Path]::GetFullPath($PlatformHome)
+if($candidate.StartsWith($source+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase)){throw 'INSTALL_TARGET_MUST_BE_OUTSIDE_SOURCE'}
+if(Test-Path -LiteralPath $PlatformHome){throw "INSTALL_TARGET_EXISTS: $PlatformHome"}
 New-Item -ItemType Directory -Path $PlatformHome | Out-Null
 try {
   Get-ChildItem -LiteralPath $source -Force | Where-Object {$_.Name -ne '.git'} | ForEach-Object {
