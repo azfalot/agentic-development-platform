@@ -1,3 +1,12 @@
 $ErrorActionPreference='Stop';Import-Module (Join-Path $PSScriptRoot '..\scripts\CodexAdapter.psm1') -Force
 function Assert([bool]$x,[string]$m){if(-not$x){throw$m}}
-$caps=Get-CodexCapabilities;Assert $caps.codex_available 'Codex unavailable';Assert ('workspace-write' -in $caps.supported_sandbox_modes) 'workspace-write missing';$dir=$env:TEMP;$contract=New-CodexExecutionContract $caps 'scoped-write' 'quotes " unicode ñ & < > spaces' $dir;Assert ($contract.mode -eq 'workspace-write') 'policy translation failed';Assert ($contract.arguments -notcontains 'elevated') 'invalid CLI sandbox leaked';$bad=[pscustomobject]@{supported_sandbox_modes=@('read-only');codex_path='codex'};try{New-CodexExecutionContract $bad 'scoped-write' 'x' $dir;throw 'unsupported sandbox accepted'}catch{Assert ($_.Exception.Message -eq 'PREFLIGHT_FAILED_UNSUPPORTED_SANDBOX') 'wrong preflight failure'};Write-Output 'Codex adapter capability and argument-boundary tests passed.'
+# Deterministic capability fixture: CI deliberately does not require a Codex installation.
+$caps=[pscustomobject]@{codex_available=$true;codex_path='mock-codex.exe';supported_sandbox_modes=@('read-only','workspace-write')}
+$dir=$env:TEMP;$contract=New-CodexExecutionContract $caps 'scoped-write' 'quotes " unicode ñ & < > spaces' $dir
+Assert ($contract.mode -eq 'workspace-write') 'policy translation failed'
+Assert ($contract.arguments -notcontains 'elevated') 'invalid CLI sandbox leaked'
+Assert ($contract.arguments[2] -eq 'workspace-write') 'sandbox argument boundary changed'
+Assert ($contract.arguments[-1] -eq 'quotes " unicode ñ & < > spaces') 'prompt argument boundary changed'
+$bad=[pscustomobject]@{supported_sandbox_modes=@('read-only');codex_path='mock-codex.exe'}
+try{New-CodexExecutionContract $bad 'scoped-write' 'x' $dir;throw 'unsupported sandbox accepted'}catch{Assert ($_.Exception.Message -eq 'PREFLIGHT_FAILED_UNSUPPORTED_SANDBOX') 'wrong preflight failure'}
+Write-Output 'Codex adapter capability and argument-boundary tests passed.'
