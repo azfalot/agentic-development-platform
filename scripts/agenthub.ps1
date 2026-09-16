@@ -10,6 +10,7 @@ $ErrorActionPreference='Stop'
 Import-Module (Join-Path $PSScriptRoot 'BDDValidator.psm1') -Force
 Import-Module (Join-Path $PSScriptRoot 'ExecutionGate.psm1') -Force
 Import-Module (Join-Path $PSScriptRoot 'AgentExecutionCore.psm1') -Force
+Import-Module (Join-Path $PSScriptRoot 'ProgressClassifier.psm1') -Force
 Import-Module (Join-Path $PSScriptRoot 'GuardrailGate.psm1') -Force
 Import-Module (Join-Path $PSScriptRoot 'GlobalGuardrailAudit.psm1') -Force
 
@@ -21,11 +22,6 @@ function Move-State($Contract,[string]$Target,[string]$Path) {
   $Contract.timestamps.updated=(Get-Date).ToUniversalTime().ToString('o')
   $script:BddTransitions+=@($Target)
   Write-Json $Contract $Path
-}
-function Test-AllowedPath([string]$Path,$Contract) {
-  $normalized=$Path.Replace('\','/')
-  if($Contract.scope.forbidden | Where-Object {$normalized -like $_}){return $false}
-  return [bool]($Contract.scope.allowed | Where-Object {$normalized -like $_})
 }
 function Get-AdapterForContract($Contract,$Routes) {
   if($Contract.assignment.role -ne 'implementer'){throw 'ROLE_DENIED'}
@@ -126,7 +122,7 @@ Move-State $contract 'CLAIMED' $contractPath
 Move-State $contract 'IMPLEMENTING' $contractPath
 $files=@(Get-ChildItem $worktree -Recurse -File | Where-Object {$_.FullName-notmatch '\\(\.git|node_modules|target|build)\\|\.(env|pem|key)$'} | ForEach-Object {
   $relative=[IO.Path]::GetRelativePath($worktree,$_.FullName).Replace('\','/')
-  if((Test-AllowedPath $relative $contract) -or $relative -eq 'AGENTS.md'){@{path=$relative;reason='allowed scope';size=$_.Length;source_category='repository'}}
+  if((Test-AgentHubContractPath $relative $contract) -or $relative -eq 'AGENTS.md'){@{path=$relative;reason='allowed scope';size=$_.Length;source_category='repository'}}
 })
 $files+=@{path='TASK_CONTRACT.json';reason='contract';size=(Get-Item $contractPath).Length;source_category='contract'}
 if(($files|Measure-Object size -Sum).Sum -gt 1048576){Move-State $contract 'BLOCKED' $contractPath;Fail 'CONTEXT_LIMIT_EXCEEDED'}
@@ -144,14 +140,15 @@ $stderr=Join-Path $worktree '.agenthub-engine.stderr.log'
 $started=Get-Date
 try{$authorizedRun=Invoke-AuthorizedExecution -BudgetPath $budgetPath -Executor {param($transaction) Invoke-AgentExecutionSpecification -Specification $specification -StandardOutputPath $stdout -StandardErrorPath $stderr -TimeoutSeconds $TimeoutSeconds};$budgetTransaction=$authorizedRun.transaction;$processResult=$authorizedRun.result}catch{Move-State $contract 'FAILED' $contractPath;Fail $_.Exception.Message}
 $changed=@(git -C $worktree status --porcelain | ForEach-Object {$_.Substring(3).Replace('\','/')} | Where-Object {-not ($_.StartsWith('.agenthub-') -or $_ -eq 'TASK_CONTRACT.json')})
-$sourceChanged=[bool]($changed|Where-Object{$_ -like 'src/**'})
-$testChanged=[bool]($changed|Where-Object{$_ -like 'tests/**'})
-$invalid=@($changed | Where-Object {-not(Test-AllowedPath $_ $contract)})
+$classification=Get-AgentHubChangeClassification -ChangedFiles $changed -Contract $contract
+$sourceChanged=$classification.source_change_detected
+$testChanged=$classification.test_change_detected
+$invalid=$classification.invalid_files
 $verification=@()
 $guardrailReport=$null
 if($invalid.Count){Move-State $contract 'BLOCKED' $contractPath;$scope='SCOPE_VIOLATION'}
 elseif(-not $processResult.process_completed -or $processResult.exit_code -ne 0){Move-State $contract 'FAILED' $contractPath;$scope='PROCESS_FAILURE'}
-elseif($changed.Count -eq 0 -or (Get-Content -Raw $stderr) -match 'CreateProcessWithLogonW|execution error:'){Move-State $contract 'FAILED' $contractPath;$scope='NO_PROGRESS_OR_TOOL_FAILURE'}
+elseif(-not $classification.progress_detected -or (Get-Content -Raw $stderr) -match 'CreateProcessWithLogonW|execution error:'){Move-State $contract 'FAILED' $contractPath;$scope='NO_PROGRESS_OR_TOOL_FAILURE'}
 else {
   Move-State $contract 'VERIFYING' $contractPath
   $verificationFile=Join-Path $worktree '.agenthub-verification.json'
@@ -170,13 +167,13 @@ else {
   } catch { Move-State $contract 'FAILED' $contractPath;$scope='GUARDRAIL_BASELINE_FAILURE' }
   if($scope -eq 'GUARDRAIL_BASELINE_FAILURE'){}
   elseif($guardrailReport.new_regression_count -gt 0){Move-State $contract 'FAILED' $contractPath;$scope='GUARDRAIL_NEW_REGRESSION'}
-  elseif(-not($sourceChanged -and $testChanged)){Move-State $contract 'FAILED' $contractPath;$scope='NO_PROGRESS_OR_TOOL_FAILURE'}
+  elseif(-not $classification.progress_detected){Move-State $contract 'FAILED' $contractPath;$scope='NO_PROGRESS_OR_TOOL_FAILURE'}
   elseif(@($verification|Where-Object {$_.exit_code -ne 0}).Count){Move-State $contract 'FAILED' $contractPath;$scope='VERIFICATION_FAILURE'}
   else{Move-State $contract 'REVIEWING' $contractPath;Move-State $contract 'READY_FOR_HUMAN' $contractPath;$scope='OK'}
 }
-$result=Get-AgentHubExecutionResult -ProcessCompleted $processResult.process_completed -ProgressDetected ($sourceChanged -and $testChanged) -ScopeValid (-not $invalid.Count) -VerificationPassed ($scope -eq 'OK') -ToolFailure ($scope -eq 'NO_PROGRESS_OR_TOOL_FAILURE')
+$result=Get-AgentHubExecutionResult -ProcessCompleted $processResult.process_completed -ProgressDetected $classification.progress_detected -ScopeValid $classification.scope_valid -VerificationPassed ($scope -eq 'OK') -ToolFailure ($scope -eq 'NO_PROGRESS_OR_TOOL_FAILURE')
 $diff=(git -C $worktree diff|Out-String);$diffHash=([Security.Cryptography.SHA256]::Create().ComputeHash([Text.Encoding]::UTF8.GetBytes($diff))|ForEach-Object{$_.ToString('x2')})-join ''
-$evidence=@{execution_result=$result;task_id=$contract.task.id;contract_hash=(Get-FileHash $contractPath -Algorithm SHA256).Hash;role=$contract.assignment.role;engine=$specification.engine;adapter=$specification.adapter;engine_version=$specification.engine_version;executable=$specification.executable;sandbox=$specification.sandbox;specification_id=$specification.specification_id;preflight_specification_id=$adapterCheck.specification_id;runner_specification_id=$processResult.specification_id;workspace=$worktree;branch=$contract.ownership.branch;ownership_claim='claimed';bdd_transitions=$script:BddTransitions;context_manifest_hash=(Get-FileHash $manifestPath -Algorithm SHA256).Hash;budget_before=$budgetTransaction.before;budget_after=$budgetTransaction.after;engine_process=@{start=$started.ToUniversalTime().ToString('o');end=(Get-Date).ToUniversalTime().ToString('o');duration_ms=[int]((Get-Date)-$started).TotalMilliseconds;exit_code=$processResult.exit_code;stdout=$stdout;stderr=$stderr};changed_files=$changed;source_change_detected=$sourceChanged;test_change_detected=$testChanged;scope_validation=$scope;verification=$verification;guardrails=$guardrailReport;final_git_diff_hash=$diffHash;final_commit_sha=(git -C $worktree rev-parse HEAD);final_state=$contract.state}
+$evidence=@{execution_result=$result;task_id=$contract.task.id;contract_hash=(Get-FileHash $contractPath -Algorithm SHA256).Hash;role=$contract.assignment.role;engine=$specification.engine;adapter=$specification.adapter;engine_version=$specification.engine_version;executable=$specification.executable;sandbox=$specification.sandbox;specification_id=$specification.specification_id;preflight_specification_id=$adapterCheck.specification_id;runner_specification_id=$processResult.specification_id;workspace=$worktree;branch=$contract.ownership.branch;ownership_claim='claimed';bdd_transitions=$script:BddTransitions;context_manifest_hash=(Get-FileHash $manifestPath -Algorithm SHA256).Hash;budget_before=$budgetTransaction.before;budget_after=$budgetTransaction.after;engine_process=@{start=$started.ToUniversalTime().ToString('o');end=(Get-Date).ToUniversalTime().ToString('o');duration_ms=[int]((Get-Date)-$started).TotalMilliseconds;exit_code=$processResult.exit_code;stdout=$stdout;stderr=$stderr};changed_files=$changed;change_classification=$classification;source_change_detected=$sourceChanged;test_change_detected=$testChanged;scope_validation=$scope;verification=$verification;guardrails=$guardrailReport;final_git_diff_hash=$diffHash;final_commit_sha=(git -C $worktree rev-parse HEAD);final_state=$contract.state}
 $evidencePath=Join-Path $worktree ('.agenthub-evidence-'+(Get-Date -Format 'yyyyMMddHHmmssfff')+'.json')
 Write-Json $evidence $evidencePath
 $evidencePath
