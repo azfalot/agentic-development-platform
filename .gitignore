@@ -1,6 +1,7 @@
 # Local execution state and generated worktrees
 .agenthub-worktrees/
 .agenthub-execution-budget.json
+.agenthub-budgets/
 .agenthub-*.log
 
 # Secrets and local configuration

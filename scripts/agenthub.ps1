@@ -133,12 +133,12 @@ $adapterCheck=Test-AgentExecutionSpecification -Adapter $adapter -Specification 
 if(-not($adapterCheck.cli_accepted -and $adapterCheck.sandbox_operational -and $adapterCheck.specification_id -eq $specification.specification_id)){Move-State $contract 'FAILED' $contractPath;Fail 'ADAPTER_PREFLIGHT_FAILED'}
 $baselinePath=Join-Path $PSScriptRoot '..\guardrails\baseline-v1.json'
 try{Test-GuardrailBaseline (Get-Content -Raw $baselinePath|ConvertFrom-Json)|Out-Null}catch{Move-State $contract 'FAILED' $contractPath;Fail 'GUARDRAIL_BASELINE_FAILURE'}
-$budgetPath=Join-Path $repo '.agenthub-execution-budget.json'
-if(-not(Test-Path $budgetPath)){Initialize-ExecutionBudget -Path $budgetPath -AuthorizedRealInvocations 0|Out-Null}
+$budgetPath=Get-TaskExecutionBudgetPath -Repository $repo -TaskId $contract.task.id
+if(-not(Test-Path $budgetPath)){Initialize-ExecutionBudget -Path $budgetPath -TaskId $contract.task.id -AuthorizedRealInvocations 0|Out-Null}
 $stdout=Join-Path $worktree '.agenthub-engine.stdout.log'
 $stderr=Join-Path $worktree '.agenthub-engine.stderr.log'
 $started=Get-Date
-try{$authorizedRun=Invoke-AuthorizedExecution -BudgetPath $budgetPath -Executor {param($transaction) Invoke-AgentExecutionSpecification -Specification $specification -StandardOutputPath $stdout -StandardErrorPath $stderr -TimeoutSeconds $TimeoutSeconds};$budgetTransaction=$authorizedRun.transaction;$processResult=$authorizedRun.result}catch{Move-State $contract 'FAILED' $contractPath;Fail $_.Exception.Message}
+try{$authorizedRun=Invoke-AuthorizedExecution -BudgetPath $budgetPath -TaskId $contract.task.id -Executor {param($transaction) Invoke-AgentExecutionSpecification -Specification $specification -StandardOutputPath $stdout -StandardErrorPath $stderr -TimeoutSeconds $TimeoutSeconds};$budgetTransaction=$authorizedRun.transaction;$processResult=$authorizedRun.result}catch{Move-State $contract 'FAILED' $contractPath;Fail $_.Exception.Message}
 $changed=@(git -C $worktree status --porcelain | ForEach-Object {$_.Substring(3).Replace('\','/')} | Where-Object {-not ($_.StartsWith('.agenthub-') -or $_ -eq 'TASK_CONTRACT.json')})
 $classification=Get-AgentHubChangeClassification -ChangedFiles $changed -Contract $contract
 $sourceChanged=$classification.source_change_detected
