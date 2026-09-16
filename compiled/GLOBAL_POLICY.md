@@ -1,6 +1,6 @@
 ﻿# PERSONAL AGENTIC DEVELOPMENT PLATFORM v1 — GLOBAL POLICIES
 
-> Compilado automaticamente desde C:\Users\Hokaido\.agents\policies. NO editar manualmente.
+> Compilado automaticamente desde policies/. NO editar manualmente.
 
 
 ---

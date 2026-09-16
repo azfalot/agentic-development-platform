@@ -1,0 +1,10 @@
+name: deterministic-ci
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run deterministic PowerShell suite
+        shell: pwsh
+        run: ./scripts/test.ps1 -RepositoryRoot $env:GITHUB_WORKSPACE

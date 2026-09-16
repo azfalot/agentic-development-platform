@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://local.agent-platform/schemas/bdd-task-contract-v2.json",
+  "$id": "https://github.com/azfalot/agentic-development-platform/schemas/bdd-task-contract-v2.json",
   "title": "Behaviour Domain Driver Task Contract v2",
   "description": "The machine-readable operational contract for one agent task. JSON is used so the contract can be validated with the platform's built-in PowerShell tooling without a package dependency.",
   "type": "object",

@@ -1,7 +1,7 @@
 # Project Agents Configuration
 
 This repository inherits the **Personal Agentic Development Platform v1**.
-Global development policies and core skills are loaded from `~/.agents/`.
+Global development policies and core skills are loaded from the explicit `AGENT_PLATFORM_HOME` installation.
 
 ## Project Context
 - **Project Name:** `<project-name>`

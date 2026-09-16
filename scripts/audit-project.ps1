@@ -49,7 +49,7 @@ $agentsMd = Join-Path $ProjectPath "AGENTS.md"
 if (Test-Path $agentsMd) {
     Report-Check -Category "BDD Contract Pointer" -Status "COMPLIANT" -Details "AGENTS.md present in repository root."
 } else {
-    Report-Check -Category "BDD Contract Pointer" -Status "NON_COMPLIANT" -Details "No AGENTS.md found in repository root." -Remediation "Create AGENTS.md from ~/.agents/templates/AGENTS.md."
+    Report-Check -Category "BDD Contract Pointer" -Status "NON_COMPLIANT" -Details "No AGENTS.md found in repository root." -Remediation "Create AGENTS.md from templates/AGENTS.md."
 }
 
 # 2. Check Database / Docker Compose

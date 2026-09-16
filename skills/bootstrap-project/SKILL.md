@@ -15,13 +15,13 @@ Standardized initialization of new projects ensuring complete alignment with glo
 
 ## Preconditions
 - Git installed and initialized.
-- Global development platform installed at `~/.agents/`.
+- Global development platform installed at `AGENT_PLATFORM_HOME`.
 - Shared PostgreSQL container running (`dev-network` accessible).
 
 ## Procedure
 1. Create project directory and initialize Git repository on `main`.
 2. Generate project structure and runtime scaffolding.
-3. Create minimal `AGENTS.md` inheriting `~/.agents/` policies.
+3. Create minimal `AGENTS.md` inheriting `AGENT_PLATFORM_HOME` policies.
 4. Configure database connection:
    - Name: `<project_name>`
    - Host (local): `localhost:5432` / Docker: `shared-postgres:5432`

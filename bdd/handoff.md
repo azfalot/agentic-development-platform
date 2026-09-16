@@ -36,5 +36,5 @@ Every agent must generate this standardized handoff payload upon completing work
 - [e.g. Requires migration V4 to run before backend deployment]
 
 ### 5. Recommended Next Action
-- [e.g. Antigravity architecture review & approval on PR #48]
+- [e.g. architecture review and approval on PR #48]
 ```

@@ -1,0 +1,14 @@
+{
+  "schema_version": 2,
+  "task": { "id": "calculator-example", "source": "example", "repository": "examples/calculator", "issue": null },
+  "goal": "Demonstrate a bounded calculator change.",
+  "assignment": { "role": "implementer", "engine": "codex" }, "state": "READY",
+  "scope": { "bounded_context": "calculator", "allowed": ["src/**", "tests/**"], "forbidden": ["**/secrets/**"] },
+  "permissions": { "filesystem": "scoped-write", "git_write": true, "github_write": true, "merge": false, "production": "denied" },
+  "ownership": { "task": "calculator-example", "branch": "codex/calculator-example", "bounded_context": "calculator", "files": ["src/**", "tests/**"], "migrations": [] },
+  "acceptance_criteria": [{ "id": "AC-1", "description": "Calculator tests pass.", "status": "PENDING" }],
+  "verification": { "build": "NOT_APPLICABLE", "lint": "NOT_APPLICABLE", "unit": "NOT_RUN", "integration": "NOT_APPLICABLE", "e2e": "NOT_APPLICABLE", "guardrails": "NOT_RUN", "ci": "NOT_RUN" },
+  "evidence": { "commit_sha": null, "changed_files": [], "test_results": [], "build_result": null, "playwright": null, "ci": null, "pull_request": null },
+  "handoff": { "target_role": "human", "reason": "Example requires review." },
+  "timestamps": { "created": "2026-09-17T00:00:00Z", "updated": "2026-09-17T00:00:00Z" }
+}

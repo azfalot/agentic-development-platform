@@ -1,73 +1,69 @@
 # Agentic Development Platform
 
-Una plataforma portable para gobernar desarrollo asistido por agentes (Codex, Gemini u otros) sin acoplar el proceso a un proveedor concreto. Incluye políticas, contratos BDD v2, plantillas, validadores de PowerShell y pruebas deterministas.
+`v0.1.0-alpha` is a Windows-first, local toolkit for governing small, human-approved coding tasks performed by an agent. It supplies BDD v2 contracts, scoped worktree execution, an explicit invocation budget, evidence records, and deterministic PowerShell tests.
 
-> Estado: base de automatización y gobernanza local. Revísala y adapta la política de infraestructura y seguridad a cada organización antes de usarla en producción.
+This is an alpha for dogfooding, not an autonomous delivery system. Codex CLI is the only proven runtime path. Other engines and GitHub orchestration are not implemented.
 
-## Qué incluye
+## What it does
 
-- Políticas globales versionadas para Git, seguridad, pruebas, CI/CD, observabilidad e infraestructura.
-- Contrato BDD v2 validable, estados canónicos, roles y evidencias reproducibles.
-- `AgentHub`: ejecutor basado en worktrees con comprobaciones de permisos, alcance, presupuesto y evidencia.
-- Adaptador de Codex que descubre los modos admitidos por la CLI y diferencia entre `cli_accepted` y `sandbox_operational`.
-- Plantillas para `AGENTS.md`, ADRs, issues y pull requests.
-- Pruebas PowerShell sin dependencias de red ni inferencia de modelos.
+- Validates BDD v2 task contracts before work begins.
+- Routes execution through a provider adapter, preserving argument boundaries.
+- Requires a branch, file scope, permissions, and an explicit execution budget.
+- Produces evidence for a human reviewer; it never auto-merges or approves work.
+- Runs deterministic validation without a model or API call.
 
-## Requisitos
+## Requirements
 
-- Windows PowerShell 5.1+ o PowerShell 7+
+- Windows PowerShell 5.1+ or PowerShell 7+
 - Git
-- Para las funciones de Codex: Codex CLI autenticado y disponible en `PATH`
+- Codex CLI on `PATH` only when using real agent execution
 
-## Primeros pasos
+Run local diagnostics (no model inference):
+
+```powershell
+pwsh -NoProfile -File .\scripts\agenthub.ps1 doctor
+```
+
+The report shows PowerShell, Git, Codex availability/version, advertised sandbox capability, `AGENT_PLATFORM_HOME`, configuration presence, and the guardrail baseline. It is diagnostic-only: a reported capability is not proof that a model task will succeed.
+
+## Install and test from a clean clone
 
 ```powershell
 git clone https://github.com/azfalot/agentic-development-platform.git
 Set-Location agentic-development-platform
-
-# Ejecutar la batería de pruebas deterministas
-Get-ChildItem .\tests\*.tests.ps1 | ForEach-Object { & $_.FullName }
+$env:AGENT_PLATFORM_HOME = Join-Path $HOME '.agent-platform'
+pwsh -NoProfile -File .\scripts\bootstrap.ps1 -ConfirmInstall
+pwsh -NoProfile -File .\scripts\test.ps1
 ```
 
-Valida un contrato BDD v2:
+`bootstrap.ps1` copies the public platform into `AGENT_PLATFORM_HOME` (or `~\.agent-platform`) and stops if that destination already exists. Choose another empty directory to install a separate copy; no overwrite option exists.
+
+Validate a contract without execution:
 
 ```powershell
-powershell -NoProfile -File .\scripts\agenthub.ps1 validate C:\ruta\a\contrato.json
+pwsh -NoProfile -File .\scripts\agenthub.ps1 validate .\examples\calculator\TASK_CONTRACT.json
 ```
 
-Consulta la preparación local sin iniciar una tarea de IA:
+`preflight` tests the configured runtime and its sandbox without requesting model work. `run` can invoke a real agent only after a human creates an execution budget; it costs whatever the selected Codex account/plan charges and may alter files in the contract's scoped worktree. Review its evidence and changes before any merge.
 
-```powershell
-powershell -NoProfile -File .\scripts\agenthub.ps1 preflight C:\ruta\a\contrato.json
-```
+## Tiny example
 
-El preflight comprueba dos cosas separadas:
+[`examples/calculator`](examples/calculator) contains a calculator module, tests, BDD v2 task contract, and verification configuration. The example's normal test command is entirely local; it creates no execution budget and makes no model call.
 
-- `cli_accepted`: la CLI reconoce `workspace-write`.
-- `sandbox_operational`: Codex puede iniciar un proceso hijo en el sandbox restringido. Una CLI aceptada no prueba que el sandbox funcione.
+## Safety and known limits
 
-## Estructura
+- A human must approve any real invocation, review, merge, and release.
+- Concurrent tasks targeting the same ownership path collide by design and are rejected.
+- The execution budget is persisted atomically and consumed before a real run; a failed persistence attempt must not spawn a process.
+- The repository ships an empty public guardrail baseline. The historical 24 local findings were an environment baseline, not defects in this public repository.
+- Windows is the supported alpha target. macOS/Linux portability, providers beyond Codex, hosted GitHub workflows, and autonomous remediation are future work.
 
-```text
-policies/    Políticas modulares de desarrollo
-bdd/         Contratos, estados, roles y evidencia BDD v2
-scripts/     Validadores, sincronización y AgentHub
-skills/      Instrucciones reutilizables para flujos de agentes
-templates/   Plantillas de repositorio y entrega
-tests/       Verificación determinista de los componentes
-evidence/    Diagnósticos reproducibles, sin credenciales
-```
+Historic failure/retry evidence is published in sanitized form at [`evidence/public-alpha-v01-package.md`](evidence/public-alpha-v01-package.md). It documents the prior Windows argument-boundary failure and the corrected successful retry without publishing workstation paths, account data, or credentials.
 
-## Seguridad y configuración local
+## Project documents
 
-Este repositorio no contiene credenciales. La política de PostgreSQL usa marcadores como `<LOCAL_POSTGRES_PASSWORD>`; define los secretos en tu entorno o almacén de secretos local, nunca en Git.
-
-Antes de activar ejecución real de un agente, configura explícitamente el presupuesto de ejecución y revisa el contrato, la rama y el alcance de archivos. Las pruebas y los comandos `validate`, `preflight` y `-DryRun` no requieren invocar un modelo.
-
-## Estado del sandbox de Codex en Windows
-
-El diagnóstico incluido en [`evidence/windows-sandbox-diagnosis-20260916.md`](evidence/windows-sandbox-diagnosis-20260916.md) documenta una incidencia reproducible de `workspace-write` en Codex CLI 0.146.0 sobre Windows 10. No se recomienda sortearla usando acceso total; actualiza Codex y ejecuta de nuevo el preflight no inferencial.
-
-## Licencia
-
-MIT. Consulta [LICENSE](LICENSE).
+- [Architecture](docs/ARCHITECTURE.md)
+- [Contributing](CONTRIBUTING.md)
+- [Security](SECURITY.md)
+- [Changelog](CHANGELOG.md)
+- [License](LICENSE)

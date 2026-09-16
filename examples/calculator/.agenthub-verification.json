@@ -1,0 +1,1 @@
+{"commands":[{"category":"unit","file":"pwsh","arguments":"-NoProfile -File tests/Calculator.tests.ps1"}]}
