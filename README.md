@@ -71,6 +71,9 @@ Historic failure/retry evidence is published in sanitized form at [`evidence/pub
 ## Project documents
 
 - [Architecture](docs/ARCHITECTURE.md)
+- [Manual](docs/MANUAL.md)
+- [Dogfooding results](docs/DOGFOODING.md)
+- [Commercialization proposal](docs/COMMERCIALIZATION.md)
 - [Contributing](CONTRIBUTING.md)
 - [Security](SECURITY.md)
 - [Changelog](CHANGELOG.md)
