@@ -44,6 +44,14 @@ Validate a contract without execution:
 pwsh -NoProfile -File .\scripts\agenthub.ps1 validate .\examples\calculator\TASK_CONTRACT.json
 ```
 
+Inspect a valid contract without modifying it or starting an engine:
+
+```powershell
+pwsh -NoProfile -File .\scripts\agenthub.ps1 status .\examples\calculator\TASK_CONTRACT.json
+```
+
+`status` prints the task ID, lifecycle state, assigned role and engine, repository, bounded context, and the task's execution-budget state when a budget exists.
+
 `preflight` tests the configured runtime and its sandbox without requesting model work. `run` can invoke a real agent only after a human creates an execution budget; it costs whatever the selected Codex account/plan charges and may alter files in the contract's scoped worktree. Review its evidence and changes before any merge.
 
 ## Tiny example

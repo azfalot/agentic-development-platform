@@ -1,5 +1,5 @@
 param(
-  [Parameter(Position=0)][ValidateSet('run','validate','preflight','doctor','help')][string]$Command='help',
+  [Parameter(Position=0)][ValidateSet('run','validate','preflight','status','doctor','help')][string]$Command='help',
   [Parameter(Position=1)][string]$TaskContract='',
   [string]$EngineExecutable='',
   [int]$TimeoutSeconds=600,
@@ -8,7 +8,7 @@ param(
 
 $ErrorActionPreference='Stop'
 Import-Module (Join-Path $PSScriptRoot 'BDDValidator.psm1') -Force
-Import-Module (Join-Path $PSScriptRoot 'ExecutionGate.psm1') -Force
+Import-Module (Join-Path $PSScriptRoot 'ExecutionGate.psm1') -Force -DisableNameChecking
 Import-Module (Join-Path $PSScriptRoot 'AgentExecutionCore.psm1') -Force
 Import-Module (Join-Path $PSScriptRoot 'ProgressClassifier.psm1') -Force
 Import-Module (Join-Path $PSScriptRoot 'GuardrailGate.psm1') -Force
@@ -66,7 +66,21 @@ function Invoke-AgentHubDoctor($Routes) {
   } | ConvertTo-Json -Depth 5
 }
 
-if($Command -eq 'help'){'agenthub <doctor|validate|preflight|run> [contract.json]';exit 0}
+function Get-AgentHubExecutionBudgetStatus([hashtable]$Contract) {
+  $budgetPath=Get-TaskExecutionBudgetPath -Repository $Contract.task.repository -TaskId $Contract.task.id
+  if(-not(Test-Path -LiteralPath $budgetPath)){return 'not present'}
+  try {
+    $budget=Get-Content -Raw -LiteralPath $budgetPath|ConvertFrom-Json -AsHashtable
+    Assert-ExecutionBudgetIdentity -Budget $budget -TaskId $Contract.task.id
+    $authorized=[int]$budget.authorized_real_invocations
+    $consumed=[int]$budget.consumed_real_invocations
+    $remaining=[int]$budget.remaining_real_invocations
+    if($authorized -lt 0 -or $consumed -lt 0 -or $remaining -ne ($authorized-$consumed)){throw 'EXECUTION_BUDGET_INVALID'}
+    return "remaining $remaining of $authorized (consumed $consumed)"
+  } catch { return 'invalid' }
+}
+
+if($Command -eq 'help'){'agenthub <doctor|validate|status|preflight|run> [contract.json]';exit 0}
 if($Command -eq 'doctor'){
   $routes=Import-PowerShellDataFile (Join-Path $PSScriptRoot '..\engine-routing.psd1')
   Invoke-AgentHubDoctor $routes
@@ -77,6 +91,18 @@ $validation=Test-BddV2Contract $TaskContract
 if(-not $validation.IsValid){Fail 'INVALID_CONTRACT'}
 if($Command -eq 'validate'){'VALID';exit 0}
 $contract=Get-Content -Raw $TaskContract | ConvertFrom-Json -AsHashtable
+if($Command -eq 'status'){
+  @(
+    "Task ID: $($contract.task.id)",
+    "State: $($contract.state)",
+    "Assigned role: $($contract.assignment.role)",
+    "Engine: $($contract.assignment.engine)",
+    "Repository: $($contract.task.repository)",
+    "Bounded context: $($contract.scope.bounded_context)",
+    "Execution budget: $(Get-AgentHubExecutionBudgetStatus $contract)"
+  )
+  exit 0
+}
 $script:BddTransitions=@($contract.state)
 $routes=Import-PowerShellDataFile (Join-Path $PSScriptRoot '..\engine-routing.psd1')
 
