@@ -21,11 +21,23 @@ function Invoke-AgentExecutionSpecification {
   if ($ProcessRunner) { return & $ProcessRunner $Specification }
   if (-not $Specification.executable -or -not $Specification.working_directory -or -not ($Specification.arguments -is [array])) { throw 'INVALID_EXECUTION_SPECIFICATION' }
   $startInfo = [Diagnostics.ProcessStartInfo]::new()
-  $startInfo.FileName = $Specification.executable
   $startInfo.WorkingDirectory = $Specification.working_directory
   $startInfo.UseShellExecute = $false
   $startInfo.RedirectStandardOutput = $true
   $startInfo.RedirectStandardError = $true
+  if ($Specification.executable.EndsWith('.ps1', [StringComparison]::OrdinalIgnoreCase)) {
+    $startInfo.FileName = (Get-Process -Id $PID).Path
+    [void]$startInfo.ArgumentList.Add('-NoProfile')
+    [void]$startInfo.ArgumentList.Add('-File')
+    [void]$startInfo.ArgumentList.Add($Specification.executable)
+  } elseif ($Specification.executable.EndsWith('.cmd', [StringComparison]::OrdinalIgnoreCase) -or $Specification.executable.EndsWith('.bat', [StringComparison]::OrdinalIgnoreCase)) {
+    $startInfo.FileName = (Join-Path $env:WINDIR 'System32\cmd.exe')
+    [void]$startInfo.ArgumentList.Add('/d')
+    [void]$startInfo.ArgumentList.Add('/c')
+    [void]$startInfo.ArgumentList.Add($Specification.executable)
+  } else {
+    $startInfo.FileName = $Specification.executable
+  }
   foreach ($argument in $Specification.arguments) { [void]$startInfo.ArgumentList.Add([string]$argument) }
   foreach ($name in $Specification.environment.Keys) { $startInfo.Environment[$name] = [string]$Specification.environment[$name] }
   $process = [Diagnostics.Process]::new()

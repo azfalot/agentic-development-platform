@@ -18,7 +18,8 @@
     "verification": { "$ref": "#/$defs/verification" },
     "evidence": { "$ref": "#/$defs/evidence" },
     "handoff": { "$ref": "#/$defs/handoff" },
-    "timestamps": { "$ref": "#/$defs/timestamps" }
+    "timestamps": { "$ref": "#/$defs/timestamps" },
+    "environment": { "$ref": "#/$defs/environment" }
   },
   "additionalProperties": false,
   "$defs": {
@@ -33,6 +34,13 @@
     "check": { "enum": ["NOT_RUN", "PASSED", "FAILED", "SKIPPED", "NOT_APPLICABLE"] },
     "evidence": { "type": "object", "required": ["commit_sha", "changed_files", "test_results", "build_result", "playwright", "ci", "pull_request"], "additionalProperties": false, "properties": { "commit_sha": { "type": ["string", "null"] }, "changed_files": { "type": "array", "items": { "type": "string" } }, "test_results": { "type": "array", "items": { "type": "string" } }, "build_result": { "type": ["string", "null"] }, "playwright": { "type": ["string", "null"] }, "ci": { "type": ["string", "null"] }, "pull_request": { "type": ["string", "null"] } } },
     "handoff": { "type": "object", "required": ["target_role", "reason"], "additionalProperties": false, "properties": { "target_role": { "enum": ["architect", "implementer", "reviewer", "researcher", "validator", "release", "human"] }, "reason": { "type": "string", "minLength": 1 } } },
-    "timestamps": { "type": "object", "required": ["created", "updated"], "additionalProperties": false, "properties": { "created": { "type": "string", "format": "date-time" }, "updated": { "type": "string", "format": "date-time" } } }
+    "timestamps": { "type": "object", "required": ["created", "updated"], "additionalProperties": false, "properties": { "created": { "type": "string", "format": "date-time" }, "updated": { "type": "string", "format": "date-time" } } },
+    "environment": { "type": "object", "required": ["required_commands", "dependencies", "services", "verification_commands", "preparation"], "additionalProperties": false, "properties": { "required_commands": { "type": "array", "items": { "$ref": "#/$defs/requirement" } }, "dependencies": { "type": "array", "items": { "$ref": "#/$defs/dependency" } }, "services": { "type": "array", "items": { "$ref": "#/$defs/service" } }, "verification_commands": { "type": "array", "items": { "$ref": "#/$defs/verificationCommand" } }, "preparation": { "$ref": "#/$defs/preparation" } } },
+    "requirement": { "type": "object", "required": ["name", "required"], "additionalProperties": false, "properties": { "name": { "type": "string", "minLength": 1 }, "required": { "type": "boolean" }, "prepare_action": { "type": "string", "minLength": 1 } } },
+    "dependency": { "type": "object", "required": ["name", "path", "required"], "additionalProperties": false, "properties": { "name": { "type": "string", "minLength": 1 }, "path": { "type": "string", "minLength": 1 }, "required": { "type": "boolean" }, "prepare_action": { "type": "string", "minLength": 1 } } },
+    "service": { "type": "object", "required": ["name", "url", "required"], "additionalProperties": false, "properties": { "name": { "type": "string", "minLength": 1 }, "url": { "type": "string", "format": "uri" }, "required": { "type": "boolean" }, "expected_status": { "type": "integer", "minimum": 100, "maximum": 599 }, "timeout_seconds": { "type": "integer", "minimum": 1, "maximum": 60 }, "prepare_action": { "type": "string", "minLength": 1 } } },
+    "verificationCommand": { "type": "object", "required": ["name", "file", "required"], "additionalProperties": false, "properties": { "name": { "type": "string", "minLength": 1 }, "file": { "type": "string", "minLength": 1 }, "required": { "type": "boolean" }, "prepare_action": { "type": "string", "minLength": 1 } } },
+    "preparation": { "type": "object", "required": ["allowed", "actions"], "additionalProperties": false, "properties": { "allowed": { "type": "boolean" }, "actions": { "type": "array", "items": { "$ref": "#/$defs/preparationAction" } } } },
+    "preparationAction": { "type": "object", "required": ["id", "file", "arguments"], "additionalProperties": false, "properties": { "id": { "type": "string", "minLength": 1 }, "file": { "type": "string", "minLength": 1 }, "arguments": { "type": "array", "items": { "type": "string" } }, "background": { "type": "boolean" } } }
   }
 }

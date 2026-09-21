@@ -40,7 +40,7 @@ properties:
     properties:
       project:
         type: "string"
-        description: "Project or repository identifier (e.g. hookr, convivia, aiecrf)"
+        description: "Project or repository identifier (e.g. auth-service, billing-api, web-app)"
       issue:
         type: "string"
         description: "Issue number or key (e.g. #42, PROJ-101)"

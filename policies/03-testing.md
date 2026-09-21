@@ -38,8 +38,8 @@ Every project must maintain a balanced testing strategy:
 
 ## 4. DATABASE TESTING ISOLATION
 
-* Automated integration tests using PostgreSQL must connect to the project's dedicated test database (e.g. `hookr_test`, `convivia_test`).
-* Tests must never execute destructive operations (`DROP`, `TRUNCATE`, bulk deletions) against the active development database (`hookr`, `convivia`).
+* Automated integration tests using PostgreSQL must connect to the project's dedicated test database (e.g. `auth_test`, `billing_test`).
+* Tests must never execute destructive operations (`DROP`, `TRUNCATE`, bulk deletions) against the active development database (`auth`, `billing`).
 
 ---
 

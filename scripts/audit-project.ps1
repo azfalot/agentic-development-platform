@@ -3,7 +3,7 @@
   Project Compliance Auditor for Personal Agentic Development Platform v1.
   Audits a specific repository and produces structured status per requirement.
 .EXAMPLE
-  .\audit-project.ps1 -ProjectPath "D:\AIeCRF"
+  .\audit-project.ps1 -ProjectPath "C:\Projects\my-project"
 #>
 
 param(

@@ -19,8 +19,9 @@ function Test-BddV2Contract {
   $errors = [System.Collections.Generic.List[string]]::new()
   try { $contract = Get-Content -Raw -LiteralPath $Path | ConvertFrom-Json -AsHashtable -Depth 32 } catch { return [pscustomobject]@{ IsValid = $false; Errors = @("Invalid JSON: $($_.Exception.Message)") } }
   $required = @('schema_version','task','goal','assignment','state','scope','permissions','ownership','acceptance_criteria','verification','evidence','handoff','timestamps')
+  $allowedTopLevel = @($required + 'environment')
   foreach ($key in $required) { if (-not $contract.ContainsKey($key)) { $errors.Add("Missing top-level field: $key") } }
-  foreach ($key in $contract.Keys) { if ($key -notin $required) { $errors.Add("Unknown top-level field: $key") } }
+  foreach ($key in $contract.Keys) { if ($key -notin $allowedTopLevel) { $errors.Add("Unknown top-level field: $key") } }
   if ($contract.schema_version -ne 2) { $errors.Add('schema_version must be 2') }
   foreach ($section in @(@('task',@('id','source','repository','issue')), @('assignment',@('role','engine')), @('scope',@('bounded_context','allowed','forbidden')), @('permissions',@('filesystem','git_write','github_write','merge','production')), @('ownership',@('task','branch','bounded_context','files','migrations')), @('verification',@('build','lint','unit','integration','e2e','guardrails','ci')), @('evidence',@('commit_sha','changed_files','test_results','build_result','playwright','ci','pull_request')), @('handoff',@('target_role','reason')), @('timestamps',@('created','updated')))) { if ($contract[$section[0]] -isnot [hashtable]) { $errors.Add("$($section[0]) must be an object"); continue }; foreach ($key in $section[1]) { if (-not $contract[$section[0]].ContainsKey($key)) { $errors.Add("Missing $($section[0]).$key") } } }
   foreach ($section in @(@('task',@('id','source','repository','issue')), @('assignment',@('role','engine')), @('scope',@('bounded_context','allowed','forbidden')), @('permissions',@('filesystem','git_write','github_write','merge','production')), @('ownership',@('task','branch','bounded_context','files','migrations')), @('verification',@('build','lint','unit','integration','e2e','guardrails','ci')), @('evidence',@('commit_sha','changed_files','test_results','build_result','playwright','ci','pull_request')), @('handoff',@('target_role','reason')), @('timestamps',@('created','updated')))) { if ($contract[$section[0]] -is [hashtable]) { foreach ($key in $contract[$section[0]].Keys) { if ($key -notin $section[1]) { $errors.Add("Unknown $($section[0]).$key") } } } }
@@ -37,6 +38,18 @@ function Test-BddV2Contract {
   foreach ($key in @('build','lint','unit','integration','e2e','guardrails','ci')) { if ($contract.verification[$key] -notin @('NOT_RUN','PASSED','FAILED','SKIPPED','NOT_APPLICABLE')) { $errors.Add("verification.$key is invalid") } }
   foreach ($key in @('changed_files','test_results')) { if ($contract.evidence[$key] -isnot [System.Collections.IEnumerable] -or $contract.evidence[$key] -is [string]) { $errors.Add("evidence.$key must be an array") } }
   foreach ($key in @('created','updated')) { $value = $contract.timestamps[$key]; if ($value -is [DateTime] -or $value -is [DateTimeOffset]) { continue }; try { [DateTimeOffset]::Parse([string]$value, [System.Globalization.CultureInfo]::InvariantCulture, [System.Globalization.DateTimeStyles]::RoundtripKind) | Out-Null } catch { $errors.Add("timestamps.$key must be ISO-8601") } }
+  if ($contract.ContainsKey('environment')) {
+    $environment = $contract.environment
+    if ($environment -isnot [hashtable]) { $errors.Add('environment must be an object') }
+    else {
+      $environmentRequired = @('required_commands','dependencies','services','verification_commands','preparation')
+      foreach ($key in $environmentRequired) { if (-not $environment.ContainsKey($key)) { $errors.Add("Missing environment.$key") } }
+      foreach ($key in $environment.Keys) { if ($key -notin $environmentRequired) { $errors.Add("Unknown environment.$key") } }
+      foreach ($key in @('required_commands','dependencies','services','verification_commands')) { if ($environment.ContainsKey($key) -and ($environment[$key] -isnot [System.Collections.IEnumerable] -or $environment[$key] -is [string])) { $errors.Add("environment.$key must be an array") } }
+      if ($environment.preparation -isnot [hashtable] -or -not $environment.preparation.ContainsKey('allowed') -or -not $environment.preparation.ContainsKey('actions')) { $errors.Add('environment.preparation must define allowed and actions') }
+      elseif ($environment.preparation.allowed -isnot [bool] -or $environment.preparation.actions -isnot [System.Collections.IEnumerable] -or $environment.preparation.actions -is [string]) { $errors.Add('environment.preparation is invalid') }
+    }
+  }
   return [pscustomobject]@{ IsValid = ($errors.Count -eq 0); Errors = @($errors) }
 }
 

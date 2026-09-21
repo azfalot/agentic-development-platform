@@ -86,11 +86,10 @@ Example:
 ```text
 ONE PostgreSQL server (localhost:5432 / shared-postgres:5432)
         │
-        ├── hookr
-        ├── campulse
-        ├── licitaia
-        ├── aiecrf
-        └── convivia
+        ├── project_a
+        ├── project_b
+        ├── project_c
+        └── project_d
 ```
 
 Never solve database isolation by creating additional PostgreSQL containers.
@@ -153,7 +152,7 @@ Never apply one project's migrations to another project's database.
 Do not automatically create a permanent PostgreSQL container just for tests.
 Prefer:
 ```text
-shared PostgreSQL → project_test database (e.g. hookr_test, convivia_test, aiecrf_test)
+shared PostgreSQL → project_test database (e.g. auth_test, billing_test, catalog_test)
 ```
 
 Tests must remain isolated from development data.
